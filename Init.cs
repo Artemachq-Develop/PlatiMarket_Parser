@@ -1,8 +1,10 @@
-﻿using AngleSharp;
-using AngleSharp.Dom;
-using AngleSharp.Html.Dom;
+﻿global using AngleSharp;
+global using AngleSharp.Dom;
+global using AngleSharp.Html.Dom;
 
-class Program
+namespace SiteParse;
+
+class Init
 {
     static async Task Main()
     {
