@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "inMb6GzjauTY1uwJcvG9KFgflf2LikU+3DvB/BDmbX7rNdi1hPS3VaRD2K8TGUnrBhDUUWrcs/T+a/b3eQSrog==",
+  "success": true,
+  "projectFilePath": "D:\\Develop\\GitHub\\PlatiMarket_Parser\\SiteParse.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ARTEM\\.nuget\\packages\\anglesharp\\1.2.0\\anglesharp.1.2.0.nupkg.sha512",
+    "C:\\Users\\ARTEM\\.nuget\\packages\\htmlagilitypack\\1.11.72\\htmlagilitypack.1.11.72.nupkg.sha512"
+  ],
+  "logs": []
+}
