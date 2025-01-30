@@ -1,67 +1,70 @@
 ﻿namespace SiteParse;
 
-public class ParseTags
+public static class ParseTags
 {
-    static async Task Start()
+    public static async Task Start()
     {
-        var address = "https://plati.market/games/red-dead-redemption-2/854/";
-        var products = await ScrapeProductInfo(address);
-
-        double min = double.MaxValue;
-        int minIndex = 0;
+        double dollarExchange = RUBExchange.GetDollarExchange();
         
-        for (int i = 0; i < products.Count; i++)
-        {
-            if (products[i].Price < min)
-            {
-                min = products[i].Price;
-                minIndex = i;
-            }
-        }
+        // URL сайта, который нужно спарсить
+        string url = "https://plati.market/games/red-dead-redemption-2/854/";
 
-        Console.WriteLine($"Самый дешевый продукт:\n{products[minIndex].ToString()}");
-    }
-
-    static async Task<List<ProductInfo>> ScrapeProductInfo(string url)
-    {
+        // Создаем конфигурацию для AngleSharp
         var config = Configuration.Default.WithDefaultLoader();
         var context = BrowsingContext.New(config);
+
+        // Загружаем страницу
         var document = await context.OpenAsync(url);
 
-        string cellSelector = "tr.orange_font";
-        string cellName = cellSelector + " td:nth-child(3) a";
-        string cellPrice = cellSelector + " td:nth-child(6)";
+        // Находим элемент h2 с классом games-header
+        var headerElement = document.QuerySelector("h2.games-header");
 
-        var names = document.QuerySelectorAll(cellName);
-        var prices = document.QuerySelectorAll(cellPrice);
-
-        return ParseProducts(names, prices);
-    }
-
-    static List<ProductInfo> ParseProducts(IHtmlCollection<IElement> names, IHtmlCollection<IElement> prices)
-    {
-        var products = new List<ProductInfo>();
-
-        for (int i = 0; i < names.Length; i++)
+        // Проверяем, содержит ли текст "Steam Gift"
+        if (headerElement != null && headerElement.TextContent.Contains("Steam Gift"))
         {
-            try
+            Console.WriteLine("Заголовок содержит 'Steam Gift'. Продолжаем парсинг...");
+
+            // Находим все элементы с классом orange_font
+            var orangeFontElements = document.QuerySelectorAll("tr.orange_font");
+
+            // Извлекаем контент из каждого элемента
+            foreach (var element in orangeFontElements)
             {
-                if (names[i] is IHtmlAnchorElement anchor)
+                // Ищем внутри текущего элемента блок <td class="product-title">
+                var productTitleElement = element.QuerySelector("td.product-title");
+                var productPrice = element.QuerySelector("td.product-price");
+
+                if (productTitleElement != null && productPrice != null)
                 {
-                    if (i < prices.Length && prices[i] != null)
+                    // Ищем внутри <td> элемент <a href>
+                    var linkElement = productTitleElement.QuerySelector("a");
+
+                    if (linkElement != null && linkElement.HasAttribute("href"))
                     {
-                        string convertedPrice = prices[i].TextContent.Replace("$", "").Replace(".", ",").Trim();
-                        double price = double.Parse(convertedPrice);
-                        products.Add(new ProductInfo(anchor.TextContent.Trim(), price, anchor.Href));
+                        // Получаем значение атрибута href
+                        string href = linkElement.GetAttribute("href");
+                        string title = linkElement.TextContent.Trim();
+
+                        double price = double.Parse(productPrice.TextContent.Replace("$", "").Replace(".", ",").Trim());
+
+                        Console.WriteLine($"Название: {title}");
+                        Console.WriteLine($"Ссылка: https://plati.market/{href}");
+                        Console.WriteLine($"Цена: {Math.Round(price * dollarExchange, 2)}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Элемент <a href> не найден.");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при обработке продукта {i + 1}: {ex.Message}");
+                else
+                {
+                    Console.WriteLine("Блок <td class='product-title'> не найден.");
+                }
             }
         }
-
-        return products;
+        else
+        {
+            Console.WriteLine("Заголовок не содержит 'Steam Gift'. Парсинг прекращен.");
+        }
     }
 }

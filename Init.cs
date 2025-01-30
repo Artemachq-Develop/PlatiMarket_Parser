@@ -8,12 +8,14 @@ class Init
 {
     static async Task Main()
     {
-        var address = "https://plati.market/games/red-dead-redemption-2/854/";
+        await ParseTags.Start();
+
+        /*var address = "https://plati.market/games/red-dead-redemption-2/854/";
         var products = await ScrapeProductInfo(address);
 
         double min = double.MaxValue;
         int minIndex = 0;
-        
+
         for (int i = 0; i < products.Count; i++)
         {
             if (products[i].Price < min)
@@ -23,7 +25,7 @@ class Init
             }
         }
 
-        Console.WriteLine($"Самый дешевый продукт:\n{products[minIndex].ToString()}");
+        Console.WriteLine($"Самый дешевый продукт:\n{products[minIndex].ToString()}");*/
     }
 
     static async Task<List<ProductInfo>> ScrapeProductInfo(string url)
