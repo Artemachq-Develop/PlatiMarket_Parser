@@ -7,10 +7,7 @@ public static class RUBExchange
 {
     private static readonly Lazy<double> _exchangeResult = new Lazy<double>(() => Exchange());
 
-    public static double GetDollarExchange()
-    {
-        return _exchangeResult.Value;
-    }
+    public static double Dollar { get => _exchangeResult.Value; }
 
     private static double Exchange()
     {
