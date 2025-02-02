@@ -5,6 +5,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <ApplicationIcon>discord_avatar_pixel.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
