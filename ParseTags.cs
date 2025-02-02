@@ -4,19 +4,23 @@ namespace SiteParse;
 
 public static class ParseTags
 {
+    private const string LinksFilePath = "links.txt";
+
     /// <summary>
     /// Starts the parsing process for the specified URL, extracts product information,
     /// and calculates the average price of products that meet the criteria.
     /// </summary>
     public static async Task Start()
     {
-        string[] urls =
-        {
-            "https://plati.market/games/a-way-out/979/?lang=ru-RU#p2577=1&r2577=10&s2577=price",
-            "https://plati.market/games/helldivers-2/1232/?lang=ru-RU#p6343=1&r6343=10&s6343=price" // Пример второй ссылки
-        };
+        List<string> urls = GetUrlsFromFile();
 
-        var fileSaver = new ResultWriter();
+        if (urls.Count == 0)
+        {
+            Console.WriteLine("Файл links.txt пуст или не содержит корректных ссылок.");
+            return;
+        }
+
+        var resultWriter = new ResultWriter();
 
         foreach (var url in urls)
         {
@@ -25,11 +29,11 @@ public static class ParseTags
             var document = await context.OpenAsync(url);
 
             var headerElements = document.QuerySelectorAll("h2.games-header");
-            
+
             bool tagsWasFound = false;
             double middlePrice = 0;
             int counter = 0;
-            
+
             var products = new List<ProductInfo>();
 
             foreach (var headerElement in headerElements)
@@ -37,12 +41,12 @@ public static class ParseTags
                 if (IsSteamHeader(headerElement))
                 {
                     tagsWasFound = true;
-                    
-                    #if DEBUG
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Заголовок содержит {headerElement.TextContent}. Продолжаем парсинг...");
-                        Console.ResetColor();
-                    #endif
+
+#if DEBUG
+                    /*Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"Заголовок содержит {headerElement.TextContent}. Продолжаем парсинг...");
+                    Console.ResetColor();*/
+#endif
 
                     var orangeFontElements = document.QuerySelectorAll("tr.orange_font, tr.colored_row");
                     foreach (var element in orangeFontElements)
@@ -52,9 +56,11 @@ public static class ParseTags
                             if (productInfo is { WasSold: > 10 })
                             {
                                 products.Add(productInfo);
-                                
-                                PrintProductInfo(productInfo, counter);
-                                
+
+#if DEBUG
+                                //PrintProductInfo(productInfo, counter);
+#endif
+
                                 middlePrice += productInfo.Price;
                                 counter++;
                             }
@@ -63,14 +69,51 @@ public static class ParseTags
                 }
             }
 
+            var prices = products
+                .Where(p => p.Price > 0)
+                .Select(p => p.Price)
+                .ToList();
+
+            var filteredPrices = PriceFilter.FilterPrices(prices);
+
+            /*Console.WriteLine("Исходные цены:");
+            foreach (var price in prices)
+            {
+                Console.Write($"{price} | ");
+            }
+
+            Console.WriteLine();
+            
+            Console.WriteLine("Отфильтрованные цены:");
+            foreach (var price in filteredPrices)
+            {
+                Console.Write($"{price} | ");
+            }
+
+            Console.WriteLine();*/
+
+            products = products
+                .Where(p => filteredPrices.Contains(p.Price))
+                .ToList();
+
             if (counter > 0)
             {
                 double averagePrice = middlePrice / counter;
 
                 string siteName = GetGameNameFromUrl(url);
 
-                // Save the data using FileSaver
-                fileSaver.SaveWebsiteData(products, averagePrice, siteName);
+                resultWriter.SaveWebsiteData(products, averagePrice, siteName);
+            }
+            
+            var cheapestProduct = products.FirstOrDefault(p => p.Price == products.Min(x => x.Price));
+            
+            if (cheapestProduct != null)
+            {
+                Console.WriteLine($"Самый дешевый товар: {cheapestProduct.Name}, Цена: {cheapestProduct.Price}");
+            }
+            else
+            {
+                Console.WriteLine("Товары не найдены.");
             }
 
             if (!tagsWasFound)
@@ -78,6 +121,30 @@ public static class ParseTags
                 Console.WriteLine("Ни одного тэга не было найдено");
             }
         }
+    }
+
+    /// <summary>
+    /// Reads URLs from the links.txt file or creates the file if it doesn't exist.
+    /// </summary>
+    /// <returns>A list of valid URLs.</returns>
+    private static List<string> GetUrlsFromFile()
+    {
+        if (!File.Exists(LinksFilePath))
+        {
+            Console.WriteLine("Файл links.txt не найден. Создаю новый файл...");
+            File.Create(LinksFilePath).Close();
+            Console.WriteLine("Файл links.txt создан. Пожалуйста, добавьте ссылки в файл (каждая ссылка на новой строке) и перезапустите программу.");
+            Environment.Exit(0);
+        }
+
+        var lines = File.ReadAllLines(LinksFilePath);
+
+        var urls = lines
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => line.Trim())
+            .ToList();
+
+        return urls;
     }
     
     /// <summary>
@@ -87,14 +154,13 @@ public static class ParseTags
     /// <returns>The extracted game name or "Unknown" if not found.</returns>
     public static string GetGameNameFromUrl(string url)
     {
-        // Регулярное выражение для поиска названия игры между "/games/" и следующим "/"
         var match = Regex.Match(url, @"/games/([^/]+)/");
         if (match.Success && match.Groups.Count > 1)
         {
-            return match.Groups[1].Value; // Возвращаем первую группу захвата
+            return match.Groups[1].Value;
         }
 
-        return "Unknown"; // Если не найдено
+        return "Unknown";
     }
 
     /// <summary>
